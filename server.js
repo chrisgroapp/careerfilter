@@ -33,7 +33,6 @@ async function initDB() {
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-// Token = SHA-256(password + salt) — stateless, no sessions library needed
 const SALT = process.env.TOKEN_SALT || 'career-tracker-salt-2026';
 
 function generateToken(password) {
@@ -52,7 +51,6 @@ function requireAuth(req, res, next) {
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-// Add this temporarily:
 console.log('Serving from:', path.join(__dirname, 'public'));
 
 // ─── Auth endpoint ────────────────────────────────────────────────────────────
@@ -129,6 +127,30 @@ app.delete('/api/applications/:id', requireAuth, async (req, res) => {
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ─── Anthropic proxy ──────────────────────────────────────────────────────────
+app.post('/api/analyze', requireAuth, async (req, res) => {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        messages: req.body.messages,
+      }),
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Anthropic proxy error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Catch-all — serve frontend
 app.get('*', (_req, res) => {
