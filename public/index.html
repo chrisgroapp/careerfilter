@@ -862,7 +862,7 @@ function showResults(r){
   document.getElementById('atp-sub').textContent=r.pipelineReason||'';
 }
 
-function addToPipeline(){
+async function addToPipeline(){
   if(!lastAnalysis)return;
   const newApp={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:'Added from analyzer. Score: '+lastAnalysis.overallScore+'/100. '+lastAnalysis.pipelineReason,strengths:lastAnalysis.strengthsActivated||[],values:lastAnalysis.valuesActivated||[]};
   try{
