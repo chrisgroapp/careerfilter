@@ -158,22 +158,6 @@ p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
 </style>
 </head>
 <body>
-<!-- Login screen -->
-<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
-  <div style="text-align:center;margin-bottom:.5rem">
-    <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text)">Career Tracker</div>
-    <div style="font-size:13px;color:var(--text3);margin-top:.25rem">Chris Wilcox</div>
-  </div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:2rem 2.5rem;width:100%;max-width:340px">
-    <div style="font-size:14px;font-weight:500;margin-bottom:1rem;color:var(--text)">Enter password to continue</div>
-    <input id="pw-input" type="password" placeholder="Password" style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;margin-bottom:.75rem">
-    <div id="pw-error" style="font-size:12px;color:var(--red);margin-bottom:.75rem;min-height:16px"></div>
-    <button onclick="submitLogin()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer">Sign in</button>
-  </div>
-</div>
-
-<!-- App shell -->
-<div id="app-shell" style="display:none">
 <div class="app">
   <div class="topbar">
     <div>
@@ -258,10 +242,6 @@ p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
           <div class="chips" id="az-chips"></div>
         </div>
         <div class="panel" style="margin-bottom:1rem">
-          <h3>Values honored <span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:var(--text3)">★ = non-negotiable &nbsp; ✗ = conflict flagged</span></h3>
-          <div class="chips" id="az-values-chips"></div>
-        </div>
-        <div class="panel" style="margin-bottom:1rem">
           <h3>Full fit analysis</h3>
           <div class="prose-box" id="az-prose"></div>
         </div>
@@ -338,11 +318,6 @@ p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
     </div>
 
     <div class="panel">
-      <h3>Core values <span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:var(--text3)">★ = non-negotiable — disqualifying if violated</span></h3>
-      <div id="values-panel"></div>
-    </div>
-
-    <div class="panel">
       <h3>Role categories innately matched to this profile</h3>
       <div id="role-cats"></div>
       <p class="note">Green flags in a job description: transformation, formation, innovation, human-centered, storytelling, brand narrative, experiential, placemaking, coaching, mentorship, faith integration, autonomy, creative latitude, mission-language. Red flags: scripted protocols, pure metrics, no creative latitude, micromanagement, no relational component.</p>
@@ -380,11 +355,6 @@ p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
     <div class="field">
       <label>Strengths this role calls on</label>
       <div class="chips" id="modal-chips"></div>
-    </div>
-    <div class="field">
-      <label>Values this role honors <span style="font-weight:400;color:var(--text3)">(equal weight to strengths)</span></label>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Non-negotiable values in <span style="color:var(--accent);font-weight:500">green</span> — flag if a role conflicts with these</div>
-      <div class="chips" id="modal-values"></div>
     </div>
     <div class="field">
       <label>Fit score preview</label>
@@ -465,6 +435,7 @@ const STRENGTHS = [
   {id:'autonomy',label:'Creative autonomy',w:2,src:'ENFP + TriMetrix low-C'},
 ];
 
+const MAX_SCORE = STRENGTHS.reduce((s,x)=>s+x.w,0);
 
 const BIG_FIVE = [
   {trait:'Extraversion',score:78,rank:1,desc:'Dominant trait. Lives with energy, outward focus, emotional engagement. Thrives in social settings, thinks by talking, invigorated by action and variety. Challenges: impatience with stillness, can dominate conversations, overcommitment.'},
@@ -482,41 +453,6 @@ const ROLE_CATS = [
   'Community Program Director','Mission-driven Nonprofit Leader',
 ];
 
-// Core values — sourced directly from Chris's written list
-// Grouped by function in fit scoring
-const VALUES = [
-  // Non-negotiable / mission-critical (weight 3 — a role that violates these is disqualifying)
-  {id:'v_faith',label:'Faith / Christ-centered',w:3,grp:'non-negotiable',desc:'Christ in me and through me — work should be compatible with, not hostile to, faith expression'},
-  {id:'v_dignity',label:'Human dignity',w:3,grp:'non-negotiable',desc:'No one is born toxic; inherent worth of every person — must be the org\'s operating assumption'},
-  {id:'v_legacy',label:'Legacy-minded',w:3,grp:'non-negotiable',desc:'Work that compounds — building something that outlasts the transaction'},
-  {id:'v_spirituality',label:'Spiritual depth',w:2,grp:'non-negotiable',desc:'Inner knowing and connection — role should allow, not suppress, spiritual dimension'},
-  // Formational / character values (weight 2)
-  {id:'v_virtue',label:'Virtue & honor',w:2,grp:'formational',desc:'Character-driven culture — integrity is assumed, not aspirational'},
-  {id:'v_courage',label:'Courage',w:2,grp:'formational',desc:'Org willing to take bold positions; not corporate risk-aversion'},
-  {id:'v_temperance',label:'Temperance',w:2,grp:'formational',desc:'Strength under control — measured, not reactive culture'},
-  {id:'v_endurance',label:'Endurance',w:2,grp:'formational',desc:'Long-game thinking — not just quarterly wins'},
-  {id:'v_selflessness',label:'Selflessness / service',w:2,grp:'formational',desc:'Role serves others, not just shareholders or metrics'},
-  {id:'v_tenderness',label:'Tenderness',w:2,grp:'formational',desc:'Warmth and care are valued in the culture, not seen as weakness'},
-  // Operational values (weight 1 — important but not disqualifying if absent)
-  {id:'v_contribution',label:'Contribution',w:2,grp:'operational',desc:'Work output matters and is visible — contribution is recognized'},
-  {id:'v_generosity',label:'Generosity',w:1,grp:'operational',desc:'Culture of giving — time, resources, recognition'},
-  {id:'v_hope',label:'Hope-oriented',w:1,grp:'operational',desc:'Forward-looking culture; growth and possibility framing'},
-  {id:'v_responsibility',label:'Responsibility',w:1,grp:'operational',desc:'Response-able culture — ownership, not blame'},
-  {id:'v_protection',label:'Protection',w:1,grp:'operational',desc:'Role protects or advocates for vulnerable people'},
-  {id:'v_order',label:'Order',w:1,grp:'operational',desc:'Some structure and clarity — not chaos, but not rigid either'},
-  {id:'v_rest',label:'Rest / sustainability',w:1,grp:'operational',desc:'Org culture supports sustainable pace — not burn-and-churn'},
-  {id:'v_strategy',label:'Strategy',w:1,grp:'operational',desc:'Role rewards strategic thinking, not just execution'},
-  {id:'v_action',label:'Bias to action',w:1,grp:'operational',desc:'Org moves decisively — not endless committees'},
-  {id:'v_discipline',label:'Discipline',w:1,grp:'operational',desc:'High standards are expected and respected'},
-  {id:'v_patience',label:'Patient growth',w:1,grp:'operational',desc:'Org understands development is step-by-step, not instant'},
-  {id:'v_gratitude',label:'Gratitude culture',w:1,grp:'operational',desc:'Appreciation is expressed — not a culture of complaint'},
-  {id:'v_confidence',label:'Confidence-building',w:1,grp:'operational',desc:'Role builds others\' confidence — "you have what it takes" ethos'},
-];
-
-const MAX_STRENGTHS = STRENGTHS.reduce((s,x)=>s+x.w,0);
-const MAX_VALUES = VALUES.reduce((s,x)=>s+x.w,0);
-const MAX_SCORE = MAX_STRENGTHS + MAX_VALUES;
-
 const STAGES = ['Researching','Applied','Interviewing','Offer / Decision','Placed'];
 const STAGE_STYLES = [
   {bg:'#F0EDE6',c:'#6B6460'},{bg:'#E8EDF5',c:'#1E3A5F'},
@@ -525,31 +461,15 @@ const STAGE_STYLES = [
 ];
 
 // ─── APP STATE ────────────────────────────────────────────────────────────────
-let apps = [];
+let apps = JSON.parse(localStorage.getItem('cw_apps_v3')||'[]');
 let editId = null;
 let lastAnalysis = null;
 
-// ─── API layer ────────────────────────────────────────────────────────────────
-function getToken(){ return sessionStorage.getItem('ct_token'); }
+function save(){localStorage.setItem('cw_apps_v3',JSON.stringify(apps))}
 
-async function api(method, path, body){
-  const opts = { method, headers: { 'Content-Type':'application/json', 'x-auth-token': getToken()||'' } };
-  if(body) opts.body = JSON.stringify(body);
-  const res = await fetch(path, opts);
-  if(res.status===401){ showLogin(); throw new Error('Unauthorized'); }
-  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||res.statusText); }
-  return res.json();
-}
-
-async function loadApps(){
-  try{ apps=await api('GET','/api/applications'); renderAll(); }
-  catch(e){ if(e.message!=='Unauthorized') console.error('Load failed:',e); }
-}
-
-function fitScore(strengths, vals){
-  let raw = 0;
-  (strengths||[]).forEach(id=>{const st=STRENGTHS.find(x=>x.id===id);if(st)raw+=st.w;});
-  (vals||[]).forEach(id=>{const v=VALUES.find(x=>x.id===id);if(v)raw+=v.w;});
+function fitScore(strengths){
+  if(!strengths||!strengths.length) return 0;
+  const raw = strengths.reduce((s,id)=>{const st=STRENGTHS.find(x=>x.id===id);return s+(st?st.w:1);},0);
   return Math.round((raw/MAX_SCORE)*10);
 }
 function fitLabel(score){
@@ -566,7 +486,7 @@ function renderBoard(){
     const cnt=apps.filter(a=>a.stage==i).length;
     const head=`<div class="col-head s${i}">${s} <span style="opacity:.55">(${cnt})</span></div>`;
     const cards=apps.filter(a=>a.stage==i).map(a=>{
-      const sc=fitScore(a.strengths, a.values),f=fitLabel(sc);
+      const sc=fitScore(a.strengths),f=fitLabel(sc);
       const urlA=a.url?`<a href="${a.url}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent2);text-decoration:none">↗ posting</a>`:'';
       const contactEl=a.contact?`<div class="card-contact">👤 ${a.contact}</div>`:'';
       return `<div class="card" onclick="openEdit('${a.id}')">
@@ -586,7 +506,7 @@ function renderList(){
   const b=document.getElementById('list-body');
   if(!apps.length){b.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text3);font-style:italic">No applications yet — add your first one</td></tr>`;return;}
   b.innerHTML=[...apps].sort((a,b)=>b.date>a.date?1:-1).map(a=>{
-    const sc=fitScore(a.strengths,a.values),f=fitLabel(sc),ss=STAGE_STYLES[a.stage]||STAGE_STYLES[0];
+    const sc=fitScore(a.strengths),f=fitLabel(sc),ss=STAGE_STYLES[a.stage]||STAGE_STYLES[0];
     const titleEl=a.url?`<a href="${a.url}" target="_blank" style="font-weight:500;color:var(--accent);text-decoration:none">${a.title||'—'} ↗</a>`:`<span style="font-weight:500">${a.title||'—'}</span>`;
     return `<tr onclick="openEdit('${a.id}')">
       <td>${titleEl}</td>
@@ -602,7 +522,7 @@ function renderList(){
 // ─── INSIGHTS ─────────────────────────────────────────────────────────────────
 function renderInsights(){
   const total=apps.length,active=apps.filter(a=>a.stage<4).length;
-  const avgFit=total?Math.round(apps.reduce((s,a)=>s+fitScore(a.strengths,a.values),0)/total):0;
+  const avgFit=total?Math.round(apps.reduce((s,a)=>s+fitScore(a.strengths),0)/total):0;
   document.getElementById('metrics').innerHTML=`
     <div class="metric"><div class="metric-lbl">Total applications</div><div class="metric-val">${total}</div><div class="metric-sub">all time</div></div>
     <div class="metric"><div class="metric-lbl">Active in pipeline</div><div class="metric-val">${active}</div><div class="metric-sub">not yet placed</div></div>
@@ -616,7 +536,7 @@ function renderInsights(){
   const mx2=Math.max(1,...sc2);
   const barColors=['#9E9890','#1E3A5F','#8B6914','#4A3470','#2D4A3E'];
   document.getElementById('funnel-bars').innerHTML=STAGES.map((s,i)=>`<div class="bar-row"><span class="bar-lbl" style="font-size:11px">${s}</span><div class="pbar-wrap" style="flex:1"><div class="pbar" style="width:${Math.round(sc2[i]/mx2*100)}%;background:${barColors[i]}"></div></div><span class="bar-num">${sc2[i]}</span></div>`).join('');
-  const high=apps.filter(a=>fitScore(a.strengths,a.values)>=7);
+  const high=apps.filter(a=>fitScore(a.strengths)>=7);
   let pat='Add applications and mark which strengths each role calls on. As your pipeline grows, patterns will emerge showing which role types activate your full profile across all five assessments.';
   if(high.length){const orgs=[...new Set(high.map(a=>a.org).filter(Boolean))];pat=`Your ${high.length} high-fit role(s) consistently activate your creative and relational strengths — Creativity/Innovation, Empathy, Futuristic Thinking, and Meaning/Mission. ${orgs.length?'Organizations like '+orgs.join(', ')+' and similar':'These organizations'} reward the rare D/I DISC profile combined with Type 4 depth: you drive results AND feel deeply. Target roles that reward innovation, autonomy, and human transformation over process compliance.`;}
   document.getElementById('role-patterns').textContent=pat;
@@ -624,24 +544,8 @@ function renderInsights(){
 
 // ─── PROFILE ─────────────────────────────────────────────────────────────────
 function renderProfile(){
-  // Values panel
-  const grps={
-    'non-negotiable':{label:'Non-negotiable — disqualifying if violated',color:'var(--accent)'},
-    'formational':{label:'Formational / character values',color:'var(--gold)'},
-    'operational':{label:'Operational values',color:'var(--blue)'},
-  };
-  const vpEl=document.getElementById('values-panel');
-  if(vpEl){
-    vpEl.innerHTML=Object.entries(grps).map(([key,meta])=>{
-      const group=VALUES.filter(v=>v.grp===key);
-      return `<div style="margin-bottom:1rem">
-        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:${meta.color};margin-bottom:6px">${meta.label}</div>
-        <div class="chips">${group.map(v=>`<span class="chip" style="cursor:default;${key==='non-negotiable'?'border-color:var(--accent2);color:var(--accent)':''}" title="${v.desc}">${v.label}${key==='non-negotiable'?' ★':''}</span>`).join('')}</div>
-      </div>`;
-    }).join('');
-  }
-
-  document.getElementById('clifton-list').innerHTML=CLIFTON.map
+  // Big Five panel
+  const b5el=document.getElementById('big-five-bars');
   if(b5el) b5el.innerHTML=BIG_FIVE.map(f=>{
     const c=f.score>=70?'#2D4A3E':f.score>=60?'#8B6914':'#8B2E2E';
     return `<div style="margin-bottom:12px">
@@ -734,34 +638,12 @@ BIG FIVE (OCEAN) — Personality.co assessment:
 - Neuroticism: 56% (MODERATE — not low) — emotional depth and sensitivity, some internal turbulence, consistent with Enneagram Type 4. Watch for burnout and overcommitment risk. Success Drivers per this assessment: Energy Resilience, People Skills, Decisiveness, Persuasion & Enthusiasm. Ideal environments: Marketing/PR, Leadership, Teaching/Coaching/Facilitation, Sales/Business Development.
 
 
-PDCA-R (Trevecca MFT program clinical self-assessment):
 Above Expectation (5/5): Conscientiousness, Moral Reasoning, Ethical Behavior
 Meets Expectation (3/5): Coping/Self-Care, Openness, Cooperativeness, Interpersonal Skills, Cultural Sensitivity, Emotional Stability
 Below Expectation (1/5): Self-Awareness
 
 GREEN FLAGS in a job description (strong fit signals): transformation, formation, identity development, innovation, human-centered design, storytelling, brand narrative, experiential, placemaking, coaching, mentorship, faith integration, autonomy, creative latitude, mission-language, pioneering, challenge, results + people, new methods, futuristic thinking
 RED FLAGS (poor fit signals): scripted protocols with no judgment, pure metrics with no relational component, heavy administrative burden, micromanagement, rigid hierarchical structure, no creative latitude, insurance-only corporate healthcare without depth, constant diplomacy required (causes stress per TriMetrix)
-
-CORE VALUES (written by Chris — carry equal weight to strengths in fit scoring):
-
-NON-NEGOTIABLE (disqualifying if a role actively violates these):
-- Faith: Christ in me and through me — work must be compatible with faith expression, not hostile to it. Faith-integrated or faith-neutral environments only.
-- Dignity: No one is born toxic; the inherent worth of every person — must be the organization's operating assumption about clients, staff, and community.
-- Legacy: Legacy-minded — building something that compounds and outlasts the transaction. Not interested in work that disappears.
-- Spirituality: Deep inner knowing and connection — role should allow, not suppress, the spiritual dimension of human experience.
-
-FORMATIONAL / CHARACTER VALUES (strong positive signal when present):
-- Virtue & Honor: Character-driven culture where integrity is assumed, not aspirational.
-- Courage: Organization willing to take bold positions; not paralyzed by corporate risk-aversion.
-- Temperance: Strength under control — measured, not reactive culture.
-- Endurance: Long-game thinking, not just quarterly wins.
-- Selflessness / Service: Role serves others, not just shareholders or metrics.
-- Tenderness: Warmth and care are valued in the culture, not seen as weakness.
-
-OPERATIONAL VALUES (positive signal; not disqualifying if absent):
-Contribution (visible output matters), Generosity, Hope-orientation, Responsibility (ownership culture), Protection (advocates for vulnerable people), Order (some structure), Rest/sustainability (not burn-and-churn), Strategy (rewards strategic thinking), Bias to action, Discipline (high standards), Patient growth, Gratitude culture, Confidence-building ("you have what it takes" ethos).
-
-IMPORTANT VALUES NUANCE: Chris's Altruistic driving force (62) means he wants to help others — but his Intentional score is only 17 (Indifferent), meaning he wants to help purposefully, not selflessly for its own sake. Roles that demand pure selflessness with no personal meaning or return will drain him. The values of Selflessness and Generosity are real, but they function best when paired with Contribution and Legacy.
 
 CAREER BACKGROUND: 20+ years in design, creative direction, video production, brand strategy, and digital marketing at organizations including Ramsey Solutions, Section 127, Advent, DELK, JBowman Creative. Currently in MFT graduate program (Trevecca Nazarene University), building toward a licensed practice called "Ritualis" focused on healthy masculine formation.`;
 
@@ -780,7 +662,7 @@ async function runAnalysis(){
   let mi=0;const msgEl=document.getElementById('az-msg');msgEl.textContent=AZ_MSGS[0];
   azInterval=setInterval(()=>{mi=(mi+1)%AZ_MSGS.length;msgEl.textContent=AZ_MSGS[mi];},2400);
 
-  const prompt=`You are an expert career counselor with deep knowledge of TriMetrix DNA, CliftonStrengths, Enneagram, Myers-Briggs, Big Five, and values-based career alignment.
+  const prompt=`You are an expert career counselor with deep knowledge of TriMetrix DNA, CliftonStrengths, Enneagram, Myers-Briggs, and behavioral assessment.
 
 CANDIDATE PROFILE:
 ${PROFILE_CTX}
@@ -790,23 +672,21 @@ ${title?'Title: '+title:''}
 ${org?'Organization: '+org:''}
 ${jd}
 
-Analyze the fit between this job description and the candidate's COMPLETE profile including core values. Respond ONLY with valid JSON (no markdown, no backticks):
+Analyze the fit between this job description and the candidate's COMPLETE profile. Respond ONLY with valid JSON (no markdown, no backticks):
 {
-  "overallScore": <integer 0-100, weighted equally between personality/strengths fit AND values alignment>,
+  "overallScore": <integer 0-100>,
   "verdict": <"Strong fit" | "Moderate fit" | "Weak fit" | "Poor fit">,
   "dimensions": [
     {"name": "Creative expression & innovation", "score": <0-100>, "color": "#2D4A3E", "rationale": "<10 words>"},
     {"name": "Relational depth & empathy", "score": <0-100>, "color": "#4A7C6B", "rationale": "<10 words>"},
-    {"name": "Mission & values alignment", "score": <0-100>, "color": "#8B6914", "rationale": "<10 words — cite specific values honored or violated>"},
+    {"name": "Mission alignment & meaning", "score": <0-100>, "color": "#8B6914", "rationale": "<10 words>"},
     {"name": "Autonomy & anti-micromanagement", "score": <0-100>, "color": "#1E3A5F", "rationale": "<10 words>"},
     {"name": "Results & futuristic orientation", "score": <0-100>, "color": "#4A3470", "rationale": "<10 words>"}
   ],
-  "strengthsActivated": [<array of strength IDs from: empathy, adaptability, communication, connectedness, individualization, creativity, futuristic, persuasion, results, receptive, resourceful, ethics, conscientiousness, meaning, autonomy>],
-  "valuesActivated": [<array of value IDs from: v_faith, v_dignity, v_legacy, v_spirituality, v_virtue, v_courage, v_temperance, v_endurance, v_selflessness, v_tenderness, v_contribution, v_generosity, v_hope, v_responsibility, v_protection, v_order, v_rest, v_strategy, v_action, v_discipline, v_patience, v_gratitude, v_confidence>],
-  "valueConflicts": [<array of value IDs that this role appears to VIOLATE or suppress — especially flag non-negotiables: v_faith, v_dignity, v_legacy, v_spirituality>],
-  "prose": "<4-5 paragraph honest analysis: what the role requires, where Chris's profile aligns (cite specific assessment scores), where there is tension or genuine mismatch — including any values conflicts, specific language from the JD that signals green or red flags, and a clear recommendation. Values alignment should carry equal weight to strengths in your recommendation.>",
+  "strengthsActivated": [<array of strength IDs that this role calls on, from: empathy, adaptability, communication, connectedness, individualization, creativity, futuristic, persuasion, results, receptive, resourceful, ethics, conscientiousness, meaning, autonomy>],
+  "prose": "<4-5 paragraph honest analysis: what the role requires, where Chris's profile aligns (cite specific assessment data), where there is tension or genuine mismatch, specific language from the JD that signals green or red flags, and a clear recommendation on whether to pursue — be specific and reference actual assessment scores>",
   "pipelineRecommendation": <"yes" | "maybe" | "no">,
-  "pipelineReason": "<one clear sentence — mention if a non-negotiable value conflict exists>"
+  "pipelineReason": "<one clear sentence>"
 }`;
 
   try{
@@ -841,18 +721,6 @@ function showResults(r){
   document.getElementById('az-dims').innerHTML=(r.dimensions||[]).map(d=>`<div class="dim-row2"><span class="dim-lbl">${d.name}</span><div class="dim-bar2"><div class="dim-fill" style="width:${d.score}%;background:${d.color}"></div></div><span class="dim-score">${d.score}</span></div>`).join('');
   const matched=r.strengthsActivated||[];
   document.getElementById('az-chips').innerHTML=STRENGTHS.map(s=>`<span class="chip${matched.includes(s.id)?' on':''}" style="cursor:default">${s.label}</span>`).join('');
-  // Values
-  const vMatched=r.valuesActivated||[];
-  const vConflicts=r.valueConflicts||[];
-  const vEl=document.getElementById('az-values-chips');
-  if(vEl){
-    vEl.innerHTML=VALUES.map(v=>{
-      const isOn=vMatched.includes(v.id);
-      const isConflict=vConflicts.includes(v.id);
-      const style=isConflict?'background:#FAECE7;color:#8B2E2E;border-color:#C9544A':isOn?'background:var(--accent-light);color:var(--accent);border-color:var(--accent2)':'';
-      return `<span class="chip" style="cursor:default;${style}" title="${v.desc}">${v.label}${v.grp==='non-negotiable'?' ★':''}${isConflict?' ✗':''}</span>`;
-    }).join('');
-  }
   document.getElementById('az-prose').textContent=r.prose||'';
   const bar=document.getElementById('az-bar');
   bar.style.display='flex';
@@ -863,34 +731,25 @@ function showResults(r){
   document.getElementById('atp-sub').textContent=r.pipelineReason||'';
 }
 
-async function addToPipeline(){
+function addToPipeline(){
   if(!lastAnalysis)return;
-  const newApp={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:'Added from analyzer. Score: '+lastAnalysis.overallScore+'/100. '+lastAnalysis.pipelineReason,strengths:lastAnalysis.strengthsActivated||[],values:lastAnalysis.valuesActivated||[]};
-  try{
-    const created=await api('POST','/api/applications',newApp);
-    apps.unshift(created);
-    document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:13px;color:var(--accent);font-weight:500">Added to pipeline as Researching ✓</div>';
-    renderBoard();renderList();
-  } catch(e){ alert('Could not add to pipeline: '+e.message); }
+  apps.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:`Added from job analyzer. Score: ${lastAnalysis.overallScore}/100. ${lastAnalysis.pipelineReason}`,strengths:lastAnalysis.strengthsActivated||[]});
+  save();
+  document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:13px;color:var(--accent);font-weight:500">Added to pipeline as "Researching" ✓</div>';
+  renderBoard();renderList();
 }
 function skipPipeline(){document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:12px;color:var(--text3)">Skipped — you can analyze another role any time.</div>';}
 function resetAz(){lastAnalysis=null;document.getElementById('az-results').style.display='none';document.getElementById('az-input').style.display='block';}
 function clearAz(){['az-jd','az-title','az-org','az-url'].forEach(id=>document.getElementById(id).value='');}
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-function renderChips(sel, selVals){
-  document.getElementById('modal-chips').innerHTML=STRENGTHS.map(s=>`<button class="chip${sel&&sel.includes(s.id)?' on':''}" onclick="toggleChip('${s.id}',this,'str')" title="${s.src}">${s.label}</button>`).join('');
-  document.getElementById('modal-values').innerHTML=VALUES.map(v=>{
-    const isNonNeg=v.grp==='non-negotiable';
-    const on=selVals&&selVals.includes(v.id);
-    return `<button class="chip${on?' on':''}" onclick="toggleChip('${v.id}',this,'val')" style="${isNonNeg&&on?'border-color:var(--accent);background:var(--accent-light);color:var(--accent)':''}" title="${v.desc}">${v.label}${isNonNeg?' ★':''}</button>`;
-  }).join('');
+function renderChips(sel){
+  document.getElementById('modal-chips').innerHTML=STRENGTHS.map(s=>`<button class="chip${sel&&sel.includes(s.id)?' on':''}" onclick="toggleChip('${s.id}',this)" title="${s.src}">${s.label}</button>`).join('');
   updatePreview();
 }
-function toggleChip(id,el,type){el.classList.toggle('on');updatePreview();}
-function getSelected(){return [...document.querySelectorAll('#modal-chips .chip.on')].map(el=>STRENGTHS.find(s=>s.label.replace(' ★','')===el.textContent)?.id||STRENGTHS.find(s=>el.textContent.startsWith(s.label))?.id).filter(Boolean);}
-function getSelectedVals(){return [...document.querySelectorAll('#modal-values .chip.on')].map(el=>VALUES.find(v=>el.textContent.replace(' ★','').trim()===v.label||el.textContent.startsWith(v.label))?.id).filter(Boolean);}
-function updatePreview(){const sc=fitScore(getSelected(),getSelectedVals());document.getElementById('preview-bar').style.width=(sc*10)+'%';document.getElementById('preview-lbl').textContent=sc+'/10';}
+function toggleChip(id,el){el.classList.toggle('on');updatePreview();}
+function getSelected(){return [...document.querySelectorAll('#modal-chips .chip.on')].map(el=>STRENGTHS.find(s=>s.label===el.textContent)?.id).filter(Boolean);}
+function updatePreview(){const sc=fitScore(getSelected());document.getElementById('preview-bar').style.width=(sc*10)+'%';document.getElementById('preview-lbl').textContent=sc+'/10';}
 
 function openAdd(){openAddStage(0);}
 function openAddStage(stage){
@@ -900,7 +759,7 @@ function openAddStage(stage){
   ['f-title','f-org','f-url','f-contact','f-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-stage').value=stage;
   document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
-  renderChips([],[]);
+  renderChips([]);
   document.getElementById('modal-bg').classList.add('open');
 }
 function openEdit(id){
@@ -914,43 +773,17 @@ function openEdit(id){
   document.getElementById('f-date').value=a.date||'';
   document.getElementById('f-contact').value=a.contact||'';
   document.getElementById('f-notes').value=a.notes||'';
-  renderChips(a.strengths||[], a.values||[]);
+  renderChips(a.strengths||[]);
   document.getElementById('modal-bg').classList.add('open');
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');editId=null;}
 function closeBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
-async function saveApp(){
-  const a={
-    id: editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-    title:document.getElementById('f-title').value.trim(),
-    org:document.getElementById('f-org').value.trim(),
-    url:document.getElementById('f-url').value.trim(),
-    stage:parseInt(document.getElementById('f-stage').value),
-    date:document.getElementById('f-date').value,
-    contact:document.getElementById('f-contact').value.trim(),
-    notes:document.getElementById('f-notes').value.trim(),
-    strengths:getSelected(),
-    values:getSelectedVals()
-  };
-  try{
-    if(editId){
-      const updated=await api('PUT','/api/applications/'+editId,a);
-      const i=apps.findIndex(x=>x.id===editId); apps[i]=updated;
-    } else {
-      const created=await api('POST','/api/applications',a);
-      apps.unshift(created);
-    }
-    closeModal(); renderAll();
-  } catch(e){ alert('Save failed: '+e.message); }
+function saveApp(){
+  const a={id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:document.getElementById('f-title').value.trim(),org:document.getElementById('f-org').value.trim(),url:document.getElementById('f-url').value.trim(),stage:parseInt(document.getElementById('f-stage').value),date:document.getElementById('f-date').value,contact:document.getElementById('f-contact').value.trim(),notes:document.getElementById('f-notes').value.trim(),strengths:getSelected()};
+  if(editId){const i=apps.findIndex(x=>x.id===editId);apps[i]=a;}else apps.push(a);
+  save();closeModal();renderAll();
 }
-async function deleteApp(){
-  if(!editId||!confirm('Remove this application?')) return;
-  try{
-    await api('DELETE','/api/applications/'+editId);
-    apps=apps.filter(x=>x.id!==editId);
-    closeModal(); renderAll();
-  } catch(e){ alert('Delete failed: '+e.message); }
-}
+function deleteApp(){if(!editId||!confirm('Remove this application?'))return;apps=apps.filter(x=>x.id!==editId);save();closeModal();renderAll();}
 
 function switchTab(view,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -961,49 +794,7 @@ function switchTab(view,el){
 }
 
 function renderAll(){renderBoard();renderList();renderInsights();renderProfile();}
-
-// ─── Auth / boot ──────────────────────────────────────────────────────────────
-function showLogin(){
-  document.getElementById('app-shell').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('pw-input').value='';
-  document.getElementById('pw-error').textContent='';
-  setTimeout(()=>document.getElementById('pw-input').focus(),100);
-}
-
-function hideLogin(){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app-shell').style.display='block';
-}
-
-async function submitLogin(){
-  const pw=document.getElementById('pw-input').value;
-  const errEl=document.getElementById('pw-error');
-  errEl.textContent='';
-  try{
-    const {token}=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(r=>{if(!r.ok)throw new Error('wrong');return r.json();});
-    sessionStorage.setItem('ct_token',token);
-    hideLogin();
-    loadApps();
-  } catch(e){
-    errEl.textContent='Incorrect password — try again.';
-    document.getElementById('pw-input').select();
-  }
-}
-
-document.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') submitLogin();
-});
-
-// Boot — check for existing session token
-if(getToken()){
-  hideLogin();
-  loadApps();
-} else {
-  showLogin();
-}
+renderAll();
 </script>
-</div>
-</div>
 </body>
 </html>
