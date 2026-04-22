@@ -158,6 +158,22 @@ p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
 </style>
 </head>
 <body>
+<!-- Login screen -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem">
+  <div style="text-align:center;margin-bottom:.5rem">
+    <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text)">Career Tracker</div>
+    <div style="font-size:13px;color:var(--text3);margin-top:.25rem">Chris Wilcox</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:2rem 2.5rem;width:100%;max-width:340px">
+    <div style="font-size:14px;font-weight:500;margin-bottom:1rem;color:var(--text)">Enter password to continue</div>
+    <input id="pw-input" type="password" placeholder="Password" style="width:100%;font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;margin-bottom:.75rem">
+    <div id="pw-error" style="font-size:12px;color:var(--red);margin-bottom:.75rem;min-height:16px"></div>
+    <button onclick="submitLogin()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer">Sign in</button>
+  </div>
+</div>
+
+<!-- App shell -->
+<div id="app-shell" style="display:none">
 <div class="app">
   <div class="topbar">
     <div>
@@ -508,11 +524,26 @@ const STAGE_STYLES = [
 ];
 
 // ─── APP STATE ────────────────────────────────────────────────────────────────
-let apps = JSON.parse(localStorage.getItem('cw_apps_v3')||'[]');
+let apps = [];
 let editId = null;
 let lastAnalysis = null;
 
-function save(){localStorage.setItem('cw_apps_v3',JSON.stringify(apps))}
+// ─── API layer ────────────────────────────────────────────────────────────────
+function getToken(){ return sessionStorage.getItem('ct_token'); }
+
+async function api(method, path, body){
+  const opts = { method, headers: { 'Content-Type':'application/json', 'x-auth-token': getToken()||'' } };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if(res.status===401){ showLogin(); throw new Error('Unauthorized'); }
+  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||res.statusText); }
+  return res.json();
+}
+
+async function loadApps(){
+  try{ apps=await api('GET','/api/applications'); renderAll(); }
+  catch(e){ if(e.message!=='Unauthorized') console.error('Load failed:',e); }
+}
 
 function fitScore(strengths, vals){
   let raw = 0;
@@ -833,10 +864,13 @@ function showResults(r){
 
 function addToPipeline(){
   if(!lastAnalysis)return;
-  apps.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:`Added from job analyzer. Score: ${lastAnalysis.overallScore}/100. ${lastAnalysis.pipelineReason}`,strengths:lastAnalysis.strengthsActivated||[],values:lastAnalysis.valuesActivated||[]});
-  save();
-  document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:13px;color:var(--accent);font-weight:500">Added to pipeline as "Researching" ✓</div>';
-  renderBoard();renderList();
+  const newApp={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:'Added from analyzer. Score: '+lastAnalysis.overallScore+'/100. '+lastAnalysis.pipelineReason,strengths:lastAnalysis.strengthsActivated||[],values:lastAnalysis.valuesActivated||[]};
+  try{
+    const created=await api('POST','/api/applications',newApp);
+    apps.unshift(created);
+    document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:13px;color:var(--accent);font-weight:500">Added to pipeline as Researching ✓</div>';
+    renderBoard();renderList();
+  } catch(e){ alert('Could not add to pipeline: '+e.message); }
 }
 function skipPipeline(){document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:12px;color:var(--text3)">Skipped — you can analyze another role any time.</div>';}
 function resetAz(){lastAnalysis=null;document.getElementById('az-results').style.display='none';document.getElementById('az-input').style.display='block';}
@@ -884,12 +918,38 @@ function openEdit(id){
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');editId=null;}
 function closeBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
-function saveApp(){
-  const a={id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:document.getElementById('f-title').value.trim(),org:document.getElementById('f-org').value.trim(),url:document.getElementById('f-url').value.trim(),stage:parseInt(document.getElementById('f-stage').value),date:document.getElementById('f-date').value,contact:document.getElementById('f-contact').value.trim(),notes:document.getElementById('f-notes').value.trim(),strengths:getSelected(),values:getSelectedVals()};
-  if(editId){const i=apps.findIndex(x=>x.id===editId);apps[i]=a;}else apps.push(a);
-  save();closeModal();renderAll();
+async function saveApp(){
+  const a={
+    id: editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    title:document.getElementById('f-title').value.trim(),
+    org:document.getElementById('f-org').value.trim(),
+    url:document.getElementById('f-url').value.trim(),
+    stage:parseInt(document.getElementById('f-stage').value),
+    date:document.getElementById('f-date').value,
+    contact:document.getElementById('f-contact').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+    strengths:getSelected(),
+    values:getSelectedVals()
+  };
+  try{
+    if(editId){
+      const updated=await api('PUT','/api/applications/'+editId,a);
+      const i=apps.findIndex(x=>x.id===editId); apps[i]=updated;
+    } else {
+      const created=await api('POST','/api/applications',a);
+      apps.unshift(created);
+    }
+    closeModal(); renderAll();
+  } catch(e){ alert('Save failed: '+e.message); }
 }
-function deleteApp(){if(!editId||!confirm('Remove this application?'))return;apps=apps.filter(x=>x.id!==editId);save();closeModal();renderAll();}
+async function deleteApp(){
+  if(!editId||!confirm('Remove this application?')) return;
+  try{
+    await api('DELETE','/api/applications/'+editId);
+    apps=apps.filter(x=>x.id!==editId);
+    closeModal(); renderAll();
+  } catch(e){ alert('Delete failed: '+e.message); }
+}
 
 function switchTab(view,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -900,7 +960,49 @@ function switchTab(view,el){
 }
 
 function renderAll(){renderBoard();renderList();renderInsights();renderProfile();}
-renderAll();
+
+// ─── Auth / boot ──────────────────────────────────────────────────────────────
+function showLogin(){
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').textContent='';
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+
+function hideLogin(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='block';
+}
+
+async function submitLogin(){
+  const pw=document.getElementById('pw-input').value;
+  const errEl=document.getElementById('pw-error');
+  errEl.textContent='';
+  try{
+    const {token}=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(r=>{if(!r.ok)throw new Error('wrong');return r.json();});
+    sessionStorage.setItem('ct_token',token);
+    hideLogin();
+    loadApps();
+  } catch(e){
+    errEl.textContent='Incorrect password — try again.';
+    document.getElementById('pw-input').select();
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') submitLogin();
+});
+
+// Boot — check for existing session token
+if(getToken()){
+  hideLogin();
+  loadApps();
+} else {
+  showLogin();
+}
 </script>
+</div>
+</div>
 </body>
 </html>
