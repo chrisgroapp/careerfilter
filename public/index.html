@@ -465,9 +465,6 @@ const STRENGTHS = [
   {id:'autonomy',label:'Creative autonomy',w:2,src:'ENFP + TriMetrix low-C'},
 ];
 
-const MAX_STRENGTHS = STRENGTHS.reduce((s,x)=>s+x.w,0);
-const MAX_VALUES = VALUES.reduce((s,x)=>s+x.w,0);
-const MAX_SCORE = MAX_STRENGTHS + MAX_VALUES;
 
 const BIG_FIVE = [
   {trait:'Extraversion',score:78,rank:1,desc:'Dominant trait. Lives with energy, outward focus, emotional engagement. Thrives in social settings, thinks by talking, invigorated by action and variety. Challenges: impatience with stillness, can dominate conversations, overcommitment.'},
@@ -515,6 +512,10 @@ const VALUES = [
   {id:'v_gratitude',label:'Gratitude culture',w:1,grp:'operational',desc:'Appreciation is expressed — not a culture of complaint'},
   {id:'v_confidence',label:'Confidence-building',w:1,grp:'operational',desc:'Role builds others\' confidence — "you have what it takes" ethos'},
 ];
+
+const MAX_STRENGTHS = STRENGTHS.reduce((s,x)=>s+x.w,0);
+const MAX_VALUES = VALUES.reduce((s,x)=>s+x.w,0);
+const MAX_SCORE = MAX_STRENGTHS + MAX_VALUES;
 
 const STAGES = ['Researching','Applied','Interviewing','Offer / Decision','Placed'];
 const STAGE_STYLES = [
