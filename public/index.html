@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chris Wilcox — Career Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F5F0;--surface:#FFFFFF;--surface2:#F0EDE6;--surface3:#E8E4DA;
+  --border:#D8D3C8;--border2:#C4BEB0;
+  --text:#1C1916;--text2:#6B6460;--text3:#9E9890;
+  --accent:#2D4A3E;--accent2:#4A7C6B;--accent-light:#E8F0ED;
+  --gold:#8B6914;--gold-light:#F5EDD8;
+  --red:#8B2E2E;--red-light:#F5E8E8;
+  --blue:#1E3A5F;--blue-light:#E8EDF5;
+  --r:10px;--r2:14px;--r3:18px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+h1,h2,h3,.serif{font-family:'DM Serif Display',serif}
+
+/* Layout */
+.app{max-width:1160px;margin:0 auto;padding:2rem 1.25rem 4rem}
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
+.brand-eye{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:.25rem}
+.brand-name{font-family:'DM Serif Display',serif;font-size:26px;color:var(--text)}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.75rem}
+.tab{padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text3);border:none;border-bottom:2px solid transparent;background:none;font-family:'DM Sans',sans-serif;letter-spacing:.02em;transition:all .15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text)}
+.view{display:none}.view.active{display:block}
+
+/* Buttons */
+.btn{padding:8px 18px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border2);background:none;color:var(--text);transition:all .15s}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn.primary:hover{background:var(--accent2)}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.btn.danger:hover{background:var(--red-light)}
+.btn.green{background:var(--accent-light);color:var(--accent);border-color:var(--accent2)}
+.btn.green:hover{background:#d4e8e0}
+
+/* Board */
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start}
+.col-head{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;padding:6px 10px;border-radius:var(--r);margin-bottom:10px}
+.col-head.s0{background:var(--surface2);color:var(--text3)}
+.col-head.s1{background:var(--blue-light);color:var(--blue)}
+.col-head.s2{background:var(--gold-light);color:var(--gold)}
+.col-head.s3{background:#EDE8F5;color:#4A3470}
+.col-head.s4{background:var(--accent-light);color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:13px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.card:hover{border-color:var(--accent2);box-shadow:0 2px 8px rgba(45,74,62,.08)}
+.card-org{font-size:11px;color:var(--text3);margin-bottom:2px}
+.card-role{font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;line-height:1.35}
+.card-contact{font-size:11px;color:var(--text3);margin-bottom:6px;font-style:italic}
+.card-foot{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.badge.high{background:var(--accent-light);color:var(--accent)}
+.badge.med{background:var(--gold-light);color:var(--gold)}
+.badge.low{background:var(--red-light);color:var(--red)}
+.card-date{font-size:10px;color:var(--text3)}
+.add-col{width:100%;padding:8px;background:none;border:1.5px dashed var(--border);border-radius:var(--r);font-size:12px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.add-col:hover{border-color:var(--accent2);color:var(--accent)}
+.empty-msg{font-size:11px;color:var(--text3);padding:6px 2px;font-style:italic}
+
+/* List */
+.list-wrap{overflow-x:auto}
+.list-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.list-tbl th{text-align:left;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border)}
+.list-tbl td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.list-tbl tr:hover td{background:var(--surface2);cursor:pointer}
+.stage-tag{font-size:10px;padding:2px 8px;border-radius:99px}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(28,25,22,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--r3);border:1px solid var(--border);padding:1.75rem;width:100%;max-width:540px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:1.25rem;color:var(--text)}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent2)}
+.field textarea{min-height:72px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+
+/* Strength chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.chip{font-size:11px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);cursor:pointer;background:none;color:var(--text2);font-family:'DM Sans',sans-serif;transition:all .15s}
+.chip.on{background:var(--accent-light);color:var(--accent);border-color:var(--accent2)}
+
+/* Progress */
+.pbar-wrap{background:var(--surface3);border-radius:99px;height:5px;overflow:hidden}
+.pbar{height:100%;border-radius:99px;background:var(--accent);transition:width .4s}
+.pbar.gold{background:var(--gold)}
+.pbar.blue{background:var(--blue)}
+
+/* Insights */
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:1.5rem}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.metric-lbl{font-size:11px;color:var(--text3);margin-bottom:4px}
+.metric-val{font-family:'DM Serif Display',serif;font-size:28px;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1.25rem;margin-bottom:1rem}
+.panel h3{font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:.875rem;color:var(--text)}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.bar-lbl{font-size:12px;width:145px;flex-shrink:0;color:var(--text)}
+.bar-num{font-size:11px;color:var(--text3);width:22px;text-align:right;flex-shrink:0}
+
+/* Profile */
+.ptag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:99px;margin:3px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.ptag.accent{background:var(--accent-light);color:var(--accent);border-color:var(--accent2)}
+.ptag.gold{background:var(--gold-light);color:var(--gold);border-color:#C9A84C}
+.ptag.blue{background:var(--blue-light);color:var(--blue);border-color:#3A6B9F}
+.score-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.score-name{font-size:13px;font-weight:500;width:160px;flex-shrink:0}
+.score-bar-wrap{flex:1;background:var(--surface3);border-radius:99px;height:6px;overflow:hidden}
+.score-bar{height:100%;border-radius:99px}
+.score-num{font-size:11px;color:var(--text3);width:28px;text-align:right;flex-shrink:0}
+.dim-detail{font-size:11px;color:var(--text3);line-height:1.6;margin-top:3px}
+p.note{font-size:12px;color:var(--text3);line-height:1.65;margin-top:.75rem}
+.disc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.75rem}
+.disc-cell{background:var(--surface2);border-radius:var(--r);padding:10px;text-align:center}
+.disc-letter{font-family:'DM Serif Display',serif;font-size:20px}
+.disc-score{font-size:13px;font-weight:500;margin-top:2px}
+.disc-label{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* Analyzer */
+.az-wrap{max-width:720px}
+.az-input-section{}
+.az-loading{display:none;padding:3rem 0;text-align:center}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.az-results{display:none;margin-top:1.5rem}
+.result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem}
+.result-title{font-family:'DM Serif Display',serif;font-size:20px}
+.score-ring-wrap{display:flex;flex-direction:column;align-items:center}
+.score-ring{position:relative;width:110px;height:110px}
+.score-ring svg{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-num{font-family:'DM Serif Display',serif;font-size:28px;color:var(--text)}
+.ring-denom{font-size:11px;color:var(--text3)}
+.ring-verdict{font-size:11px;font-weight:500;margin-top:8px;padding:3px 12px;border-radius:99px}
+.result-grid{display:grid;grid-template-columns:130px 1fr;gap:1.5rem;align-items:start;margin-bottom:1.5rem}
+.dim-row2{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dim-lbl{font-size:12px;width:155px;flex-shrink:0;color:var(--text)}
+.dim-bar2{flex:1;background:var(--surface3);border-radius:99px;height:6px;overflow:hidden}
+.dim-fill{height:100%;border-radius:99px;transition:width .6s}
+.dim-score{font-size:11px;color:var(--text3);width:26px;text-align:right;flex-shrink:0}
+.prose-box{font-size:13px;color:var(--text2);line-height:1.75;white-space:pre-wrap}
+.pipeline-bar{background:var(--surface2);border-radius:var(--r2);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem;border:1px solid var(--border)}
+.atp-title{font-size:14px;font-weight:500;color:var(--text)}
+.atp-sub{font-size:11px;color:var(--text3);margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="brand-eye">Career Pipeline</div>
+      <div class="brand-name">Chris Wilcox</div>
+    </div>
+    <button class="btn primary" onclick="openAdd()">+ Add application</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('board',this)">Board</button>
+    <button class="tab" onclick="switchTab('list',this)">List</button>
+    <button class="tab" onclick="switchTab('analyzer',this)">Job analyzer</button>
+    <button class="tab" onclick="switchTab('insights',this)">Insights</button>
+    <button class="tab" onclick="switchTab('profile',this)">My profile</button>
+  </div>
+
+  <!-- BOARD -->
+  <div id="view-board" class="view active">
+    <div class="board" id="board-grid"></div>
+  </div>
+
+  <!-- LIST -->
+  <div id="view-list" class="view">
+    <div class="list-wrap">
+      <table class="list-tbl">
+        <thead><tr><th>Role</th><th>Organization</th><th>Stage</th><th>Fit score</th><th>Date</th><th>Contact / intro</th></tr></thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ANALYZER -->
+  <div id="view-analyzer" class="view">
+    <div class="az-wrap">
+      <div style="margin-bottom:1.25rem">
+        <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:.375rem">Job description analyzer</div>
+        <div style="font-size:13px;color:var(--text3)">Paste any job description for a full AI fit report scored against your complete personality profile — TriMetrix, CliftonStrengths, MBTI, Enneagram, and PDCA-R.</div>
+      </div>
+      <div id="az-input">
+        <div class="row2" style="margin-bottom:1rem">
+          <div class="field"><label>Role title (optional)</label><input id="az-title" type="text" placeholder="e.g. Creative Director"></div>
+          <div class="field"><label>Organization (optional)</label><input id="az-org" type="text" placeholder="e.g. Elevate"></div>
+        </div>
+        <div class="field"><label>Job URL (optional)</label><input id="az-url" type="text" placeholder="https://..."></div>
+        <div class="field"><label>Job description</label><textarea id="az-jd" style="min-height:190px;font-size:13px" placeholder="Paste the full job description here. More detail = more accurate analysis."></textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn" onclick="clearAz()">Clear</button>
+          <button class="btn primary" onclick="runAnalysis()">Analyze fit →</button>
+        </div>
+      </div>
+      <div class="az-loading" id="az-loading">
+        <div class="spinner"></div>
+        <span style="font-size:13px;color:var(--text3)" id="az-msg">Reading job description...</span>
+      </div>
+      <div class="az-results" id="az-results">
+        <div class="result-header">
+          <div class="result-title" id="az-heading">Fit report</div>
+          <button class="btn" style="font-size:12px;padding:6px 14px" onclick="resetAz()">← Analyze another</button>
+        </div>
+        <div class="result-grid">
+          <div class="score-ring-wrap">
+            <div class="score-ring">
+              <svg width="110" height="110" viewBox="0 0 110 110">
+                <circle cx="55" cy="55" r="46" fill="none" stroke="#E8E4DA" stroke-width="9"/>
+                <circle id="az-ring" cx="55" cy="55" r="46" fill="none" stroke="#2D4A3E" stroke-width="9" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" style="transition:stroke-dashoffset 1s ease"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-num" id="az-score-num">—</div>
+                <div class="ring-denom">/100</div>
+              </div>
+            </div>
+            <div class="ring-verdict badge" id="az-verdict" style="margin-top:10px">—</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px">Dimension scores</div>
+            <div id="az-dims"></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-bottom:1rem">
+          <h3>Strengths & competencies activated</h3>
+          <div class="chips" id="az-chips"></div>
+        </div>
+        <div class="panel" style="margin-bottom:1rem">
+          <h3>Values honored <span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:var(--text3)">★ = non-negotiable &nbsp; ✗ = conflict flagged</span></h3>
+          <div class="chips" id="az-values-chips"></div>
+        </div>
+        <div class="panel" style="margin-bottom:1rem">
+          <h3>Full fit analysis</h3>
+          <div class="prose-box" id="az-prose"></div>
+        </div>
+        <div class="pipeline-bar" id="az-bar">
+          <div><div class="atp-title" id="atp-title">Add to pipeline?</div><div class="atp-sub" id="atp-sub"></div></div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn" onclick="skipPipeline()">Skip</button>
+            <button class="btn green" onclick="addToPipeline()">+ Add to pipeline</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div id="view-insights" class="view">
+    <div class="metrics" id="metrics"></div>
+    <div class="two-col">
+      <div class="panel"><h3>Strength activation</h3><div id="str-bars"></div></div>
+      <div class="panel"><h3>Pipeline funnel</h3><div id="funnel-bars"></div></div>
+    </div>
+    <div class="panel"><h3>Role pattern analysis</h3><div id="role-patterns" style="font-size:13px;color:var(--text2);line-height:1.75"></div></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div id="view-profile" class="view">
+
+    <div class="panel">
+      <h3>Assessment overview</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:.5rem">
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.5rem;font-weight:500">Personality</div>
+          <span class="ptag accent">Enneagram Type 4</span>
+          <span class="ptag blue">ENFP (Myers-Briggs)</span>
+        </div>
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.5rem;font-weight:500">PDCA-R highlights</div>
+          <span class="ptag accent">Conscientiousness 5/5</span>
+          <span class="ptag accent">Moral Reasoning 5/5</span>
+          <span class="ptag accent">Ethical Behavior 5/5</span>
+          <span class="ptag">Self-Awareness — growth area</span>
+        </div>
+      </div>
+      <p class="note">Type 4 brings depth, authenticity, and a hunger for meaning. ENFPs are energized by possibility and people. Together: a rare person who creates distinctive work, connects deeply, and needs the work to matter — not just pay.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Big Five (OCEAN) — Personality.co</h3>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:.875rem">Dominant trait: <strong style="color:var(--text)">Extraversion (78%)</strong> — consistent with ENFP and TriMetrix High-I (58). Moderate Neuroticism (56%) adds emotional depth nuance consistent with Enneagram Type 4.</div>
+      <div id="big-five-bars"></div>
+    </div>
+
+    <div class="panel">
+      <h3>CliftonStrengths top 5 <span style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3);font-weight:400">(completed Nov 2025 — current)</span></h3>
+      <div id="clifton-list"></div>
+    </div>
+
+    <div class="panel">
+      <h3>TriMetrix DNA — DISC behavioral profile</h3>
+      <div class="disc-grid" id="disc-grid"></div>
+      <div style="font-size:11px;color:var(--text3)">Natural style: <strong>Conducting Persuader</strong> (D/I dominant). Adapted style: Promoting Persuader. Thrives in challenge, dislikes micromanagement, routine, or environments where risk-taking isn't rewarded.</div>
+    </div>
+
+    <div class="panel">
+      <h3>TriMetrix DNA — driving forces</h3>
+      <div id="driving-forces"></div>
+      <p class="note">Passionate (2+ SD above mean): Objective, Receptive, Resourceful, Altruistic. Indifferent (2+ SD below): Harmonious, Selfless, Structured, Intentional. Highly motivated by functionality, new methods, ROI, and helping others — deeply unmotivated by rigid tradition or purely selfless tasks with no personal return.</p>
+    </div>
+
+    <div class="panel">
+      <h3>TriMetrix DNA — top competencies</h3>
+      <div id="competencies"></div>
+      <p class="note">Well Developed: Creativity/Innovation (8.3), Futuristic Thinking (7.0). Needs Development: Self-Management/Time, Conflict Management, Planning/Organizing. These development areas are consistent with TriMetrix DISC patterns and confirmed by PDCA-R self-management score.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Core values <span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:var(--text3)">★ = non-negotiable — disqualifying if violated</span></h3>
+      <div id="values-panel"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Role categories innately matched to this profile</h3>
+      <div id="role-cats"></div>
+      <p class="note">Green flags in a job description: transformation, formation, innovation, human-centered, storytelling, brand narrative, experiential, placemaking, coaching, mentorship, faith integration, autonomy, creative latitude, mission-language. Red flags: scripted protocols, pure metrics, no creative latitude, micromanagement, no relational component.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Strengths used in fit scoring</h3>
+      <div class="chips" id="all-chips"></div>
+      <p class="note">Each strength is weighted by assessment evidence. When you add an application, check which of these the role explicitly calls on — the analyzer does this automatically from job descriptions.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="closeBg(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add application</div>
+    <div class="row2">
+      <div class="field"><label>Role title</label><input id="f-title" type="text" placeholder="e.g. Creative Director"></div>
+      <div class="field"><label>Organization</label><input id="f-org" type="text" placeholder="e.g. Elevate"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Stage</label>
+        <select id="f-stage">
+          <option value="0">Researching</option><option value="1">Applied</option>
+          <option value="2">Interviewing</option><option value="3">Offer / Decision</option><option value="4">Placed</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="f-date" type="date"></div>
+    </div>
+    <div class="field"><label>Job URL</label><input id="f-url" type="text" placeholder="https://..."></div>
+    <div class="field"><label>LinkedIn contact / intro</label><input id="f-contact" type="text" placeholder="e.g. Jane Smith — 2nd connection at Elevate"></div>
+    <div class="field"><label>Notes / next action</label><textarea id="f-notes" placeholder="What's the next step?"></textarea></div>
+    <div class="field">
+      <label>Strengths this role calls on</label>
+      <div class="chips" id="modal-chips"></div>
+    </div>
+    <div class="field">
+      <label>Values this role honors <span style="font-weight:400;color:var(--text3)">(equal weight to strengths)</span></label>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Non-negotiable values in <span style="color:var(--accent);font-weight:500">green</span> — flag if a role conflicts with these</div>
+      <div class="chips" id="modal-values"></div>
+    </div>
+    <div class="field">
+      <label>Fit score preview</label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="pbar-wrap" style="flex:1"><div class="pbar" id="preview-bar" style="width:0%"></div></div>
+        <span id="preview-lbl" style="font-size:12px;font-weight:500;color:var(--text3);min-width:46px;text-align:right">0/10</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn danger" id="del-btn" style="display:none;margin-right:auto" onclick="deleteApp()">Delete</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveApp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── COMPLETE PROFILE DATA (sourced from all 4 assessment documents) ────────
+
+const CLIFTON = [
+  {name:'Empathy',domain:'Relationship Building',desc:'Senses emotions of those around you; feels what others feel; finds the right words and tone; gives voice to unspoken feelings. People are drawn to you.'},
+  {name:'Adaptability',domain:'Relationship Building',desc:'Lives in the moment; creates the future through present choices; responds willingly to demands of the moment; calm and unflappable under change and uncertainty.'},
+  {name:'Communication',domain:'Influencing',desc:'Natural ability to explain, describe, and present; brings ideas to life with stories, images and metaphors; hunts for the perfect phrase; people like listening to you.'},
+  {name:'Connectedness',domain:'Relationship Building',desc:'Believes everything is linked and happens for a reason; builds bridges between people; considerate, caring and accepting; provides comfort that there is purpose beyond daily routine.'},
+  {name:'Individualization',domain:'Relationship Building',desc:'Intrigued by unique qualities of each person; instinctively observes style, motivation, and how people think; knows how to draw out the best in everyone.'},
+];
+
+const DISC = [
+  {letter:'D',score:68,label:'Dominance',desc:'Goal-oriented, decisive, competitive, pioneering. Needs challenge. Loses interest when routine follows resolution.'},
+  {letter:'I',score:58,label:'Influence',desc:'Sociable, optimistic, persuasive, enthusiastic. Trusts others, likes positive environment and team spokesmanship.'},
+  {letter:'S',score:45,label:'Steadiness',desc:'Mobile and flexible — comfortable juggling projects, moving between tasks without trauma.'},
+  {letter:'C',score:36,label:'Compliance',desc:'Independent, self-willed, open to new suggestions, comfortable where constraints can be loosened. Avoids rigid structure.'},
+];
+
+const DRIVING_FORCES = [
+  {name:'Objective',score:83,level:'Passionate',desc:'Driven by functionality and objectivity — asks "does it work?" above all else.'},
+  {name:'Receptive',score:82,level:'Passionate',desc:'Driven by new ideas, methods and opportunities outside any defined system.'},
+  {name:'Resourceful',score:82,level:'Passionate',desc:'Driven by practical results and maximizing ROI on time, talent and resources.'},
+  {name:'Altruistic',score:62,level:'Primary',desc:'Driven to assist others for the satisfaction of being helpful or supportive.'},
+  {name:'Intellectual',score:60,level:'Situational',desc:'Driven by opportunities to learn and discover truth — situational pull.'},
+  {name:'Harmonious',score:6,level:'Indifferent',desc:'Little drive from aesthetic balance or subjective experience in surroundings.'},
+  {name:'Structured',score:8,level:'Indifferent',desc:'Little motivation from traditional approaches or defined systems for living.'},
+];
+
+const COMPETENCIES = [
+  {name:'Creativity / Innovation',score:8.3,level:'Well Developed',color:'#2D4A3E'},
+  {name:'Futuristic Thinking',score:7.0,level:'Well Developed',color:'#2D4A3E'},
+  {name:'Continuous Learning',score:7.0,level:'Developed',color:'#4A7C6B'},
+  {name:'Teamwork',score:6.7,level:'Developed',color:'#4A7C6B'},
+  {name:'Customer / Client Service',score:6.3,level:'Developed',color:'#4A7C6B'},
+  {name:'Diplomacy',score:6.0,level:'Developed',color:'#4A7C6B'},
+  {name:'Empathy (competency)',score:3.7,level:'Developed',color:'#4A7C6B'},
+  {name:'Self-Management / Time',score:0.0,level:'Needs Development',color:'#8B2E2E'},
+  {name:'Conflict Management',score:1.3,level:'Needs Development',color:'#8B2E2E'},
+  {name:'Planning / Organizing',score:1.7,level:'Needs Development',color:'#8B2E2E'},
+];
+
+// Scoring weights based on assessment evidence
+const STRENGTHS = [
+  // CliftonStrengths (actual top 5)
+  {id:'empathy',label:'Empathy',w:3,src:'CliftonStrengths #1'},
+  {id:'adaptability',label:'Adaptability',w:2,src:'CliftonStrengths #2'},
+  {id:'communication',label:'Communication',w:2,src:'CliftonStrengths #3'},
+  {id:'connectedness',label:'Connectedness',w:2,src:'CliftonStrengths #4'},
+  {id:'individualization',label:'Individualization',w:2,src:'CliftonStrengths #5'},
+  // TriMetrix DISC / Driving Forces
+  {id:'creativity',label:'Creativity / Innovation',w:3,src:'TriMetrix #1 competency'},
+  {id:'futuristic',label:'Futuristic Thinking',w:2,src:'TriMetrix #2 competency'},
+  {id:'persuasion',label:'Influence & Persuasion',w:2,src:'TriMetrix High-I (58)'},
+  {id:'results',label:'Results-driven execution',w:2,src:'TriMetrix High-D (68)'},
+  {id:'receptive',label:'New ideas & methods',w:2,src:'TriMetrix Receptive 82'},
+  {id:'resourceful',label:'Resourcefulness / ROI',w:2,src:'TriMetrix Resourceful 82'},
+  // PDCA-R
+  {id:'ethics',label:'Ethical integrity',w:2,src:'PDCA-R 5/5'},
+  {id:'conscientiousness',label:'Conscientiousness',w:2,src:'PDCA-R 5/5'},
+  // Enneagram / MBTI
+  {id:'meaning',label:'Meaning & mission',w:3,src:'Enneagram Type 4'},
+  {id:'autonomy',label:'Creative autonomy',w:2,src:'ENFP + TriMetrix low-C'},
+];
+
+const MAX_STRENGTHS = STRENGTHS.reduce((s,x)=>s+x.w,0);
+const MAX_VALUES = VALUES.reduce((s,x)=>s+x.w,0);
+const MAX_SCORE = MAX_STRENGTHS + MAX_VALUES;
+
+const BIG_FIVE = [
+  {trait:'Extraversion',score:78,rank:1,desc:'Dominant trait. Lives with energy, outward focus, emotional engagement. Thrives in social settings, thinks by talking, invigorated by action and variety. Challenges: impatience with stillness, can dominate conversations, overcommitment.'},
+  {trait:'Agreeableness',score:69,rank:4,desc:'Dynamic, expressive, emotionally available. Connector, encourager, emotional catalyst in relationships. Shares feelings openly; brings energy into groups.'},
+  {trait:'Openness',score:66,rank:1,desc:'Ranked #1 by this assessment. Highly creative, ingenuity, tolerance for ambiguity. Consistent with TriMetrix Creativity/Innovation 8.3 and Receptive driving force 82.'},
+  {trait:'Conscientiousness',score:66,rank:2,desc:'Reliable follow-through when committed. Consistent with PDCA-R Conscientiousness 5/5. Growth edge: self-management of time and priorities (TriMetrix 0.0/10).'},
+  {trait:'Neuroticism',score:56,rank:5,desc:'Moderate — not low. Emotional depth, sensitivity to environment, some internal turbulence. Consistent with Enneagram Type 4 emotional intensity. Awareness needed for burnout and overcommitment risk.'},
+];
+
+const ROLE_CATS = [
+  'Creative Director','Brand Strategist','Experiential / Environmental Designer',
+  'Content Strategist / Storyteller','Human-centered Design Consultant',
+  'Curriculum Developer','Men\'s Formation Coach','Therapist / Counselor (future)',
+  'Organizational Change Consultant','Leadership Coach',
+  'Community Program Director','Mission-driven Nonprofit Leader',
+];
+
+// Core values — sourced directly from Chris's written list
+// Grouped by function in fit scoring
+const VALUES = [
+  // Non-negotiable / mission-critical (weight 3 — a role that violates these is disqualifying)
+  {id:'v_faith',label:'Faith / Christ-centered',w:3,grp:'non-negotiable',desc:'Christ in me and through me — work should be compatible with, not hostile to, faith expression'},
+  {id:'v_dignity',label:'Human dignity',w:3,grp:'non-negotiable',desc:'No one is born toxic; inherent worth of every person — must be the org\'s operating assumption'},
+  {id:'v_legacy',label:'Legacy-minded',w:3,grp:'non-negotiable',desc:'Work that compounds — building something that outlasts the transaction'},
+  {id:'v_spirituality',label:'Spiritual depth',w:2,grp:'non-negotiable',desc:'Inner knowing and connection — role should allow, not suppress, spiritual dimension'},
+  // Formational / character values (weight 2)
+  {id:'v_virtue',label:'Virtue & honor',w:2,grp:'formational',desc:'Character-driven culture — integrity is assumed, not aspirational'},
+  {id:'v_courage',label:'Courage',w:2,grp:'formational',desc:'Org willing to take bold positions; not corporate risk-aversion'},
+  {id:'v_temperance',label:'Temperance',w:2,grp:'formational',desc:'Strength under control — measured, not reactive culture'},
+  {id:'v_endurance',label:'Endurance',w:2,grp:'formational',desc:'Long-game thinking — not just quarterly wins'},
+  {id:'v_selflessness',label:'Selflessness / service',w:2,grp:'formational',desc:'Role serves others, not just shareholders or metrics'},
+  {id:'v_tenderness',label:'Tenderness',w:2,grp:'formational',desc:'Warmth and care are valued in the culture, not seen as weakness'},
+  // Operational values (weight 1 — important but not disqualifying if absent)
+  {id:'v_contribution',label:'Contribution',w:2,grp:'operational',desc:'Work output matters and is visible — contribution is recognized'},
+  {id:'v_generosity',label:'Generosity',w:1,grp:'operational',desc:'Culture of giving — time, resources, recognition'},
+  {id:'v_hope',label:'Hope-oriented',w:1,grp:'operational',desc:'Forward-looking culture; growth and possibility framing'},
+  {id:'v_responsibility',label:'Responsibility',w:1,grp:'operational',desc:'Response-able culture — ownership, not blame'},
+  {id:'v_protection',label:'Protection',w:1,grp:'operational',desc:'Role protects or advocates for vulnerable people'},
+  {id:'v_order',label:'Order',w:1,grp:'operational',desc:'Some structure and clarity — not chaos, but not rigid either'},
+  {id:'v_rest',label:'Rest / sustainability',w:1,grp:'operational',desc:'Org culture supports sustainable pace — not burn-and-churn'},
+  {id:'v_strategy',label:'Strategy',w:1,grp:'operational',desc:'Role rewards strategic thinking, not just execution'},
+  {id:'v_action',label:'Bias to action',w:1,grp:'operational',desc:'Org moves decisively — not endless committees'},
+  {id:'v_discipline',label:'Discipline',w:1,grp:'operational',desc:'High standards are expected and respected'},
+  {id:'v_patience',label:'Patient growth',w:1,grp:'operational',desc:'Org understands development is step-by-step, not instant'},
+  {id:'v_gratitude',label:'Gratitude culture',w:1,grp:'operational',desc:'Appreciation is expressed — not a culture of complaint'},
+  {id:'v_confidence',label:'Confidence-building',w:1,grp:'operational',desc:'Role builds others\' confidence — "you have what it takes" ethos'},
+];
+
+const STAGES = ['Researching','Applied','Interviewing','Offer / Decision','Placed'];
+const STAGE_STYLES = [
+  {bg:'#F0EDE6',c:'#6B6460'},{bg:'#E8EDF5',c:'#1E3A5F'},
+  {bg:'#F5EDD8',c:'#8B6914'},{bg:'#EDE8F5',c:'#4A3470'},
+  {bg:'#E8F0ED',c:'#2D4A3E'},
+];
+
+// ─── APP STATE ────────────────────────────────────────────────────────────────
+let apps = JSON.parse(localStorage.getItem('cw_apps_v3')||'[]');
+let editId = null;
+let lastAnalysis = null;
+
+function save(){localStorage.setItem('cw_apps_v3',JSON.stringify(apps))}
+
+function fitScore(strengths, vals){
+  let raw = 0;
+  (strengths||[]).forEach(id=>{const st=STRENGTHS.find(x=>x.id===id);if(st)raw+=st.w;});
+  (vals||[]).forEach(id=>{const v=VALUES.find(x=>x.id===id);if(v)raw+=v.w;});
+  return Math.round((raw/MAX_SCORE)*10);
+}
+function fitLabel(score){
+  if(score>=7) return {label:'Strong fit',cls:'high'};
+  if(score>=4) return {label:'Moderate fit',cls:'med'};
+  return {label:'Low fit',cls:'low'};
+}
+
+// ─── BOARD ────────────────────────────────────────────────────────────────────
+function renderBoard(){
+  const g=document.getElementById('board-grid');g.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const col=document.createElement('div');
+    const cnt=apps.filter(a=>a.stage==i).length;
+    const head=`<div class="col-head s${i}">${s} <span style="opacity:.55">(${cnt})</span></div>`;
+    const cards=apps.filter(a=>a.stage==i).map(a=>{
+      const sc=fitScore(a.strengths, a.values),f=fitLabel(sc);
+      const urlA=a.url?`<a href="${a.url}" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:var(--accent2);text-decoration:none">↗ posting</a>`:'';
+      const contactEl=a.contact?`<div class="card-contact">👤 ${a.contact}</div>`:'';
+      return `<div class="card" onclick="openEdit('${a.id}')">
+        <div class="card-org">${a.org||'—'}</div>
+        <div class="card-role">${a.title||'Untitled role'}</div>
+        ${contactEl}
+        <div class="card-foot"><span class="badge ${f.cls}">${f.label}</span>${urlA}<span class="card-date">${a.date||''}</span></div>
+      </div>`;
+    }).join('');
+    col.innerHTML=head+(cards||`<div class="empty-msg">No applications yet</div>`)+`<button class="add-col" onclick="openAddStage(${i})">+ add</button>`;
+    g.appendChild(col);
+  });
+}
+
+// ─── LIST ─────────────────────────────────────────────────────────────────────
+function renderList(){
+  const b=document.getElementById('list-body');
+  if(!apps.length){b.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text3);font-style:italic">No applications yet — add your first one</td></tr>`;return;}
+  b.innerHTML=[...apps].sort((a,b)=>b.date>a.date?1:-1).map(a=>{
+    const sc=fitScore(a.strengths,a.values),f=fitLabel(sc),ss=STAGE_STYLES[a.stage]||STAGE_STYLES[0];
+    const titleEl=a.url?`<a href="${a.url}" target="_blank" style="font-weight:500;color:var(--accent);text-decoration:none">${a.title||'—'} ↗</a>`:`<span style="font-weight:500">${a.title||'—'}</span>`;
+    return `<tr onclick="openEdit('${a.id}')">
+      <td>${titleEl}</td>
+      <td>${a.org||'—'}</td>
+      <td><span class="stage-tag badge" style="background:${ss.bg};color:${ss.c}">${STAGES[a.stage]}</span></td>
+      <td><span class="badge ${f.cls}">${f.label} (${sc}/10)</span></td>
+      <td style="color:var(--text3)">${a.date||'—'}</td>
+      <td style="color:var(--text3);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.contact||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── INSIGHTS ─────────────────────────────────────────────────────────────────
+function renderInsights(){
+  const total=apps.length,active=apps.filter(a=>a.stage<4).length;
+  const avgFit=total?Math.round(apps.reduce((s,a)=>s+fitScore(a.strengths,a.values),0)/total):0;
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-lbl">Total applications</div><div class="metric-val">${total}</div><div class="metric-sub">all time</div></div>
+    <div class="metric"><div class="metric-lbl">Active in pipeline</div><div class="metric-val">${active}</div><div class="metric-sub">not yet placed</div></div>
+    <div class="metric"><div class="metric-lbl">Avg fit score</div><div class="metric-val">${avgFit}<span style="font-size:18px;color:var(--text3)">/10</span></div><div class="metric-sub">strength-weighted</div></div>`;
+  const strMap={};STRENGTHS.forEach(s=>strMap[s.id]=0);
+  apps.forEach(a=>(a.strengths||[]).forEach(s=>{if(strMap[s]!==undefined)strMap[s]++;}));
+  const sorted=STRENGTHS.map(s=>({...s,count:strMap[s.id]})).sort((a,b)=>b.count-a.count);
+  const maxC=Math.max(1,...sorted.map(s=>s.count));
+  document.getElementById('str-bars').innerHTML=sorted.map(s=>`<div class="bar-row"><span class="bar-lbl">${s.label}</span><div class="pbar-wrap" style="flex:1"><div class="pbar" style="width:${Math.round(s.count/maxC*100)}%"></div></div><span class="bar-num">${s.count}</span></div>`).join('');
+  const sc2=STAGES.map((_,i)=>apps.filter(a=>a.stage==i).length);
+  const mx2=Math.max(1,...sc2);
+  const barColors=['#9E9890','#1E3A5F','#8B6914','#4A3470','#2D4A3E'];
+  document.getElementById('funnel-bars').innerHTML=STAGES.map((s,i)=>`<div class="bar-row"><span class="bar-lbl" style="font-size:11px">${s}</span><div class="pbar-wrap" style="flex:1"><div class="pbar" style="width:${Math.round(sc2[i]/mx2*100)}%;background:${barColors[i]}"></div></div><span class="bar-num">${sc2[i]}</span></div>`).join('');
+  const high=apps.filter(a=>fitScore(a.strengths,a.values)>=7);
+  let pat='Add applications and mark which strengths each role calls on. As your pipeline grows, patterns will emerge showing which role types activate your full profile across all five assessments.';
+  if(high.length){const orgs=[...new Set(high.map(a=>a.org).filter(Boolean))];pat=`Your ${high.length} high-fit role(s) consistently activate your creative and relational strengths — Creativity/Innovation, Empathy, Futuristic Thinking, and Meaning/Mission. ${orgs.length?'Organizations like '+orgs.join(', ')+' and similar':'These organizations'} reward the rare D/I DISC profile combined with Type 4 depth: you drive results AND feel deeply. Target roles that reward innovation, autonomy, and human transformation over process compliance.`;}
+  document.getElementById('role-patterns').textContent=pat;
+}
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+function renderProfile(){
+  // Values panel
+  const grps={
+    'non-negotiable':{label:'Non-negotiable — disqualifying if violated',color:'var(--accent)'},
+    'formational':{label:'Formational / character values',color:'var(--gold)'},
+    'operational':{label:'Operational values',color:'var(--blue)'},
+  };
+  const vpEl=document.getElementById('values-panel');
+  if(vpEl){
+    vpEl.innerHTML=Object.entries(grps).map(([key,meta])=>{
+      const group=VALUES.filter(v=>v.grp===key);
+      return `<div style="margin-bottom:1rem">
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:${meta.color};margin-bottom:6px">${meta.label}</div>
+        <div class="chips">${group.map(v=>`<span class="chip" style="cursor:default;${key==='non-negotiable'?'border-color:var(--accent2);color:var(--accent)':''}" title="${v.desc}">${v.label}${key==='non-negotiable'?' ★':''}</span>`).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('clifton-list').innerHTML=CLIFTON.map
+  if(b5el) b5el.innerHTML=BIG_FIVE.map(f=>{
+    const c=f.score>=70?'#2D4A3E':f.score>=60?'#8B6914':'#8B2E2E';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:500;width:150px;flex-shrink:0">${f.trait}</span>
+        <div class="pbar-wrap" style="flex:1"><div class="pbar" style="width:${f.score}%;background:${c}"></div></div>
+        <span style="font-size:12px;color:var(--text3);width:32px;text-align:right">${f.score}%</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.55;padding-left:162px">${f.desc}</div>
+    </div>`;}).join('');
+
+  document.getElementById('clifton-list').innerHTML=CLIFTON.map(c=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">
+      <div style="flex-shrink:0">
+        <span class="ptag accent" style="margin:0">${c.name}</span>
+        <div style="font-size:9px;color:var(--text3);text-align:center;margin-top:2px">${c.domain}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.65">${c.desc}</div>
+    </div>`).join('');
+
+  document.getElementById('disc-grid').innerHTML=DISC.map(d=>`
+    <div class="disc-cell">
+      <div class="disc-letter" style="color:${['#8B2E2E','#8B6914','#2D4A3E','#1E3A5F'][DISC.indexOf(d)]}">${d.letter}</div>
+      <div class="disc-score">${d.score}</div>
+      <div class="disc-label">${d.label}</div>
+    </div>`).join('');
+
+  document.getElementById('driving-forces').innerHTML=DRIVING_FORCES.map(f=>{
+    const pct=f.score;
+    const c=f.level==='Passionate'?'#2D4A3E':f.level==='Indifferent'?'#8B2E2E':'#8B6914';
+    return `<div class="score-row">
+      <span class="score-name">${f.name}</span>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%;background:${c}"></div></div>
+      <span class="score-num">${pct}</span>
+      <span class="badge" style="font-size:9px;padding:1px 7px;background:${c}22;color:${c};flex-shrink:0">${f.level}</span>
+    </div>`;}).join('');
+
+  document.getElementById('competencies').innerHTML=COMPETENCIES.map(c=>`
+    <div class="score-row">
+      <span class="score-name" style="font-size:12px">${c.name}</span>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${c.score*10}%;background:${c.color}"></div></div>
+      <span class="score-num">${c.score.toFixed(1)}</span>
+    </div>`).join('');
+
+  document.getElementById('role-cats').innerHTML=ROLE_CATS.map(r=>`<span class="ptag">${r}</span>`).join('');
+  document.getElementById('all-chips').innerHTML=STRENGTHS.map(s=>`<span class="chip" style="cursor:default" title="${s.src}">${s.label}</span>`).join('');
+}
+
+// ─── ANALYZER ─────────────────────────────────────────────────────────────────
+const PROFILE_CTX=`Christopher Wilcox — Complete multi-assessment personality profile:
+
+ENNEAGRAM TYPE 4 (The Individualist): Seeks depth, authenticity, meaning, and unique self-expression. Thrives when work feels significant and emotionally resonant. Avoids generic, bureaucratic, or spiritually hollow roles. Core fear: having no identity or significance. Core desire: to find who he is and what makes him unique.
+
+MYERS-BRIGGS ENFP: Energized by people, possibilities, and creative synthesis. Excellent at relationship-building, vision-casting, connecting ideas across domains. Drained by rigid structure, micromanagement, or lack of autonomy.
+
+CLIFTONSTRENGTHS TOP 5 (Nov 2025 — current, verified from source document):
+1. Empathy — senses emotions of others; finds right words and tone; gives voice to unspoken feelings
+2. Adaptability — lives in the moment; calm and unflappable under change; responds willingly to shifting demands
+3. Communication — natural storyteller; brings ideas to life with metaphors and vivid language; people like listening
+4. Connectedness — believes everything is linked; builds bridges between people; provides sense of purpose
+5. Individualization — fascinated by unique qualities of each person; draws out the best in everyone
+
+TRIMETRIX DNA — DISC (Natural Style):
+- Dominance D=68: goal-oriented, decisive, competitive, pioneering, results-driven, loses interest after challenge ceases
+- Influence I=58: sociable, optimistic, persuasive, enthusiastic team spokesman
+- Steadiness S=45: mobile, comfortable with frequent change and task-switching
+- Compliance C=36: independent, self-willed, resists rigid procedures — needs environments where constraints can be loosened
+- Natural style archetype: CONDUCTING PERSUADER
+
+TRIMETRIX — DRIVING FORCES (Passionate = 2+ SD above mean):
+- Objective (83) — PASSIONATE: driven by functionality over aesthetics; asks "does it work?"
+- Receptive (82) — PASSIONATE: driven by new ideas and methods outside any defined system
+- Resourceful (82) — PASSIONATE: driven by practical results, ROI, efficiency
+- Altruistic (62) — PRIMARY: driven to help others for satisfaction of being supportive
+- Indifferent: Harmonious (6), Structured (8), Selfless (7), Intentional (17)
+
+TRIMETRIX — TOP COMPETENCIES (scored 0-10):
+Well Developed: Creativity/Innovation (8.3 — highest), Futuristic Thinking (7.0)
+Developed: Continuous Learning (7.0), Teamwork (6.7), Customer Service (6.3), Diplomacy (6.0), Empathy (3.7)
+Needs Development: Self-Management/Time (0.0), Conflict Management (1.3), Planning/Organizing (1.7), Analytical Problem Solving (1.7)
+
+TRIMETRIX — IDEAL ENVIRONMENT:
+Freedom to focus on functionality over appearance; environments where momentum and challenge are rewarded; ability to compartmentalize; forum to champion new methods; opportunity to alter existing systems; key performance measured on results not rigid process; opportunity to drive others to reach their potential; results-driven environment where people are respected.
+
+BIG FIVE (OCEAN) — Personality.co assessment:
+- Extraversion: 78% (DOMINANT trait) — high energy, outward focus, thinks by talking, thrives socially, action-oriented, can overcommit
+- Agreeableness: 69% — emotionally available, connector, brings energy to groups, shares feelings openly
+- Openness: 66% (ranked #1 by this assessment) — consistent with TriMetrix Creativity/Innovation 8.3 and Receptive driving force 82
+- Conscientiousness: 66% — reliable when committed (consistent with PDCA-R 5/5), but time/priority self-management is a growth edge
+- Neuroticism: 56% (MODERATE — not low) — emotional depth and sensitivity, some internal turbulence, consistent with Enneagram Type 4. Watch for burnout and overcommitment risk. Success Drivers per this assessment: Energy Resilience, People Skills, Decisiveness, Persuasion & Enthusiasm. Ideal environments: Marketing/PR, Leadership, Teaching/Coaching/Facilitation, Sales/Business Development.
+
+
+PDCA-R (Trevecca MFT program clinical self-assessment):
+Above Expectation (5/5): Conscientiousness, Moral Reasoning, Ethical Behavior
+Meets Expectation (3/5): Coping/Self-Care, Openness, Cooperativeness, Interpersonal Skills, Cultural Sensitivity, Emotional Stability
+Below Expectation (1/5): Self-Awareness
+
+GREEN FLAGS in a job description (strong fit signals): transformation, formation, identity development, innovation, human-centered design, storytelling, brand narrative, experiential, placemaking, coaching, mentorship, faith integration, autonomy, creative latitude, mission-language, pioneering, challenge, results + people, new methods, futuristic thinking
+RED FLAGS (poor fit signals): scripted protocols with no judgment, pure metrics with no relational component, heavy administrative burden, micromanagement, rigid hierarchical structure, no creative latitude, insurance-only corporate healthcare without depth, constant diplomacy required (causes stress per TriMetrix)
+
+CORE VALUES (written by Chris — carry equal weight to strengths in fit scoring):
+
+NON-NEGOTIABLE (disqualifying if a role actively violates these):
+- Faith: Christ in me and through me — work must be compatible with faith expression, not hostile to it. Faith-integrated or faith-neutral environments only.
+- Dignity: No one is born toxic; the inherent worth of every person — must be the organization's operating assumption about clients, staff, and community.
+- Legacy: Legacy-minded — building something that compounds and outlasts the transaction. Not interested in work that disappears.
+- Spirituality: Deep inner knowing and connection — role should allow, not suppress, the spiritual dimension of human experience.
+
+FORMATIONAL / CHARACTER VALUES (strong positive signal when present):
+- Virtue & Honor: Character-driven culture where integrity is assumed, not aspirational.
+- Courage: Organization willing to take bold positions; not paralyzed by corporate risk-aversion.
+- Temperance: Strength under control — measured, not reactive culture.
+- Endurance: Long-game thinking, not just quarterly wins.
+- Selflessness / Service: Role serves others, not just shareholders or metrics.
+- Tenderness: Warmth and care are valued in the culture, not seen as weakness.
+
+OPERATIONAL VALUES (positive signal; not disqualifying if absent):
+Contribution (visible output matters), Generosity, Hope-orientation, Responsibility (ownership culture), Protection (advocates for vulnerable people), Order (some structure), Rest/sustainability (not burn-and-churn), Strategy (rewards strategic thinking), Bias to action, Discipline (high standards), Patient growth, Gratitude culture, Confidence-building ("you have what it takes" ethos).
+
+IMPORTANT VALUES NUANCE: Chris's Altruistic driving force (62) means he wants to help others — but his Intentional score is only 17 (Indifferent), meaning he wants to help purposefully, not selflessly for its own sake. Roles that demand pure selflessness with no personal meaning or return will drain him. The values of Selflessness and Generosity are real, but they function best when paired with Contribution and Legacy.
+
+CAREER BACKGROUND: 20+ years in design, creative direction, video production, brand strategy, and digital marketing at organizations including Ramsey Solutions, Section 127, Advent, DELK, JBowman Creative. Currently in MFT graduate program (Trevecca Nazarene University), building toward a licensed practice called "Ritualis" focused on healthy masculine formation.`;
+
+const AZ_MSGS=['Reading job description...','Mapping to TriMetrix and CliftonStrengths...','Scoring across all five dimensions...','Writing your fit report...'];
+let azInterval=null;
+
+async function runAnalysis(){
+  const jd=document.getElementById('az-jd').value.trim();
+  if(!jd){alert('Please paste a job description first.');return;}
+  const title=document.getElementById('az-title').value.trim();
+  const org=document.getElementById('az-org').value.trim();
+  const url=document.getElementById('az-url').value.trim();
+  document.getElementById('az-input').style.display='none';
+  document.getElementById('az-results').style.display='none';
+  document.getElementById('az-loading').style.display='block';
+  let mi=0;const msgEl=document.getElementById('az-msg');msgEl.textContent=AZ_MSGS[0];
+  azInterval=setInterval(()=>{mi=(mi+1)%AZ_MSGS.length;msgEl.textContent=AZ_MSGS[mi];},2400);
+
+  const prompt=`You are an expert career counselor with deep knowledge of TriMetrix DNA, CliftonStrengths, Enneagram, Myers-Briggs, Big Five, and values-based career alignment.
+
+CANDIDATE PROFILE:
+${PROFILE_CTX}
+
+JOB DESCRIPTION:
+${title?'Title: '+title:''}
+${org?'Organization: '+org:''}
+${jd}
+
+Analyze the fit between this job description and the candidate's COMPLETE profile including core values. Respond ONLY with valid JSON (no markdown, no backticks):
+{
+  "overallScore": <integer 0-100, weighted equally between personality/strengths fit AND values alignment>,
+  "verdict": <"Strong fit" | "Moderate fit" | "Weak fit" | "Poor fit">,
+  "dimensions": [
+    {"name": "Creative expression & innovation", "score": <0-100>, "color": "#2D4A3E", "rationale": "<10 words>"},
+    {"name": "Relational depth & empathy", "score": <0-100>, "color": "#4A7C6B", "rationale": "<10 words>"},
+    {"name": "Mission & values alignment", "score": <0-100>, "color": "#8B6914", "rationale": "<10 words — cite specific values honored or violated>"},
+    {"name": "Autonomy & anti-micromanagement", "score": <0-100>, "color": "#1E3A5F", "rationale": "<10 words>"},
+    {"name": "Results & futuristic orientation", "score": <0-100>, "color": "#4A3470", "rationale": "<10 words>"}
+  ],
+  "strengthsActivated": [<array of strength IDs from: empathy, adaptability, communication, connectedness, individualization, creativity, futuristic, persuasion, results, receptive, resourceful, ethics, conscientiousness, meaning, autonomy>],
+  "valuesActivated": [<array of value IDs from: v_faith, v_dignity, v_legacy, v_spirituality, v_virtue, v_courage, v_temperance, v_endurance, v_selflessness, v_tenderness, v_contribution, v_generosity, v_hope, v_responsibility, v_protection, v_order, v_rest, v_strategy, v_action, v_discipline, v_patience, v_gratitude, v_confidence>],
+  "valueConflicts": [<array of value IDs that this role appears to VIOLATE or suppress — especially flag non-negotiables: v_faith, v_dignity, v_legacy, v_spirituality>],
+  "prose": "<4-5 paragraph honest analysis: what the role requires, where Chris's profile aligns (cite specific assessment scores), where there is tension or genuine mismatch — including any values conflicts, specific language from the JD that signals green or red flags, and a clear recommendation. Values alignment should carry equal weight to strengths in your recommendation.>",
+  "pipelineRecommendation": <"yes" | "maybe" | "no">,
+  "pipelineReason": "<one clear sentence — mention if a non-negotiable value conflict exists>"
+}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const raw=data.content.map(b=>b.text||'').join('');
+    const result=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    result._title=title;result._org=org;result._url=url;result._jd=jd;
+    lastAnalysis=result;showResults(result);
+  }catch(err){
+    clearInterval(azInterval);
+    document.getElementById('az-loading').style.display='none';
+    document.getElementById('az-input').style.display='block';
+    alert('Analysis failed — please try again. ('+err.message+')');
+  }
+}
+
+function showResults(r){
+  clearInterval(azInterval);
+  document.getElementById('az-loading').style.display='none';
+  document.getElementById('az-results').style.display='block';
+  document.getElementById('az-heading').textContent=[r._title,r._org].filter(Boolean).join(' — ')||'Fit report';
+  document.getElementById('az-score-num').textContent=r.overallScore;
+  const circ=2*Math.PI*46;
+  const ringColor=r.overallScore>=70?'#2D4A3E':r.overallScore>=40?'#8B6914':'#8B2E2E';
+  document.getElementById('az-ring').style.stroke=ringColor;
+  setTimeout(()=>{document.getElementById('az-ring').style.strokeDashoffset=circ*(1-r.overallScore/100);},100);
+  const v=document.getElementById('az-verdict');
+  v.textContent=r.verdict;
+  const vc=r.overallScore>=70?'high':r.overallScore>=40?'med':'low';
+  v.className='ring-verdict badge '+vc;
+  document.getElementById('az-dims').innerHTML=(r.dimensions||[]).map(d=>`<div class="dim-row2"><span class="dim-lbl">${d.name}</span><div class="dim-bar2"><div class="dim-fill" style="width:${d.score}%;background:${d.color}"></div></div><span class="dim-score">${d.score}</span></div>`).join('');
+  const matched=r.strengthsActivated||[];
+  document.getElementById('az-chips').innerHTML=STRENGTHS.map(s=>`<span class="chip${matched.includes(s.id)?' on':''}" style="cursor:default">${s.label}</span>`).join('');
+  // Values
+  const vMatched=r.valuesActivated||[];
+  const vConflicts=r.valueConflicts||[];
+  const vEl=document.getElementById('az-values-chips');
+  if(vEl){
+    vEl.innerHTML=VALUES.map(v=>{
+      const isOn=vMatched.includes(v.id);
+      const isConflict=vConflicts.includes(v.id);
+      const style=isConflict?'background:#FAECE7;color:#8B2E2E;border-color:#C9544A':isOn?'background:var(--accent-light);color:var(--accent);border-color:var(--accent2)':'';
+      return `<span class="chip" style="cursor:default;${style}" title="${v.desc}">${v.label}${v.grp==='non-negotiable'?' ★':''}${isConflict?' ✗':''}</span>`;
+    }).join('');
+  }
+  document.getElementById('az-prose').textContent=r.prose||'';
+  const bar=document.getElementById('az-bar');
+  bar.style.display='flex';
+  const atpT=document.getElementById('atp-title');
+  if(r.pipelineRecommendation==='yes'){atpT.textContent='Recommended: add to pipeline';atpT.style.color='var(--accent)';}
+  else if(r.pipelineRecommendation==='maybe'){atpT.textContent='Worth considering';atpT.style.color='var(--gold)';}
+  else{atpT.textContent='Not recommended for pipeline';atpT.style.color='var(--red)';}
+  document.getElementById('atp-sub').textContent=r.pipelineReason||'';
+}
+
+function addToPipeline(){
+  if(!lastAnalysis)return;
+  apps.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:lastAnalysis._title||'Analyzed role',org:lastAnalysis._org||'',url:lastAnalysis._url||'',stage:0,date:new Date().toISOString().slice(0,10),contact:'',notes:`Added from job analyzer. Score: ${lastAnalysis.overallScore}/100. ${lastAnalysis.pipelineReason}`,strengths:lastAnalysis.strengthsActivated||[],values:lastAnalysis.valuesActivated||[]});
+  save();
+  document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:13px;color:var(--accent);font-weight:500">Added to pipeline as "Researching" ✓</div>';
+  renderBoard();renderList();
+}
+function skipPipeline(){document.getElementById('az-bar').innerHTML='<div style="width:100%;text-align:center;font-size:12px;color:var(--text3)">Skipped — you can analyze another role any time.</div>';}
+function resetAz(){lastAnalysis=null;document.getElementById('az-results').style.display='none';document.getElementById('az-input').style.display='block';}
+function clearAz(){['az-jd','az-title','az-org','az-url'].forEach(id=>document.getElementById(id).value='');}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function renderChips(sel, selVals){
+  document.getElementById('modal-chips').innerHTML=STRENGTHS.map(s=>`<button class="chip${sel&&sel.includes(s.id)?' on':''}" onclick="toggleChip('${s.id}',this,'str')" title="${s.src}">${s.label}</button>`).join('');
+  document.getElementById('modal-values').innerHTML=VALUES.map(v=>{
+    const isNonNeg=v.grp==='non-negotiable';
+    const on=selVals&&selVals.includes(v.id);
+    return `<button class="chip${on?' on':''}" onclick="toggleChip('${v.id}',this,'val')" style="${isNonNeg&&on?'border-color:var(--accent);background:var(--accent-light);color:var(--accent)':''}" title="${v.desc}">${v.label}${isNonNeg?' ★':''}</button>`;
+  }).join('');
+  updatePreview();
+}
+function toggleChip(id,el,type){el.classList.toggle('on');updatePreview();}
+function getSelected(){return [...document.querySelectorAll('#modal-chips .chip.on')].map(el=>STRENGTHS.find(s=>s.label.replace(' ★','')===el.textContent)?.id||STRENGTHS.find(s=>el.textContent.startsWith(s.label))?.id).filter(Boolean);}
+function getSelectedVals(){return [...document.querySelectorAll('#modal-values .chip.on')].map(el=>VALUES.find(v=>el.textContent.replace(' ★','').trim()===v.label||el.textContent.startsWith(v.label))?.id).filter(Boolean);}
+function updatePreview(){const sc=fitScore(getSelected(),getSelectedVals());document.getElementById('preview-bar').style.width=(sc*10)+'%';document.getElementById('preview-lbl').textContent=sc+'/10';}
+
+function openAdd(){openAddStage(0);}
+function openAddStage(stage){
+  editId=null;
+  document.getElementById('modal-title').textContent='Add application';
+  document.getElementById('del-btn').style.display='none';
+  ['f-title','f-org','f-url','f-contact','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-stage').value=stage;
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  renderChips([],[]);
+  document.getElementById('modal-bg').classList.add('open');
+}
+function openEdit(id){
+  const a=apps.find(x=>x.id===id);if(!a)return;editId=id;
+  document.getElementById('modal-title').textContent='Edit application';
+  document.getElementById('del-btn').style.display='';
+  document.getElementById('f-title').value=a.title||'';
+  document.getElementById('f-org').value=a.org||'';
+  document.getElementById('f-url').value=a.url||'';
+  document.getElementById('f-stage').value=a.stage||0;
+  document.getElementById('f-date').value=a.date||'';
+  document.getElementById('f-contact').value=a.contact||'';
+  document.getElementById('f-notes').value=a.notes||'';
+  renderChips(a.strengths||[], a.values||[]);
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open');editId=null;}
+function closeBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
+function saveApp(){
+  const a={id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:document.getElementById('f-title').value.trim(),org:document.getElementById('f-org').value.trim(),url:document.getElementById('f-url').value.trim(),stage:parseInt(document.getElementById('f-stage').value),date:document.getElementById('f-date').value,contact:document.getElementById('f-contact').value.trim(),notes:document.getElementById('f-notes').value.trim(),strengths:getSelected(),values:getSelectedVals()};
+  if(editId){const i=apps.findIndex(x=>x.id===editId);apps[i]=a;}else apps.push(a);
+  save();closeModal();renderAll();
+}
+function deleteApp(){if(!editId||!confirm('Remove this application?'))return;apps=apps.filter(x=>x.id!==editId);save();closeModal();renderAll();}
+
+function switchTab(view,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  el.classList.add('active');
+  renderAll();
+}
+
+function renderAll(){renderBoard();renderList();renderInsights();renderProfile();}
+renderAll();
+</script>
+</body>
+</html>
