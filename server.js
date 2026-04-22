@@ -135,7 +135,7 @@ app.get('*', (_req, res) => {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 initDB()
-  .then(() => app.listen(PORT, () =>
+  .then(() => app.listen(PORT, '0.0.0.0', () =>
     console.log(`Career tracker running on port ${PORT}`)
   ))
   .catch(err => {
