@@ -690,7 +690,7 @@ Analyze the fit between this job description and the candidate's COMPLETE profil
 }`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
+    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
     const raw=data.content.map(b=>b.text||'').join('');
     const result=JSON.parse(raw.replace(/```json|```/g,'').trim());

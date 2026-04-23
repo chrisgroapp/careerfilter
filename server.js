@@ -129,7 +129,7 @@ app.delete('/api/applications/:id', requireAuth, async (req, res) => {
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ─── Anthropic proxy ──────────────────────────────────────────────────────────
-app.post('/api/analyze', requireAuth, async (req, res) => {
+app.post('/api/analyze', async (req, res) => {
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
