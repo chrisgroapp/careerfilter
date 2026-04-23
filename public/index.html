@@ -692,7 +692,7 @@ Analyze the fit between this job description and the candidate's COMPLETE profil
   try{
     const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
     const data=await res.json();
-    if(!res.ok||data.error) throw new Error(data.error||'API error');
+    if(!res.ok||data.error||data.status==='error'||!data.content) throw new Error(data.message||data.error||'API error');
     const raw=data.content.map(b=>b.text||'').join('');
     const result=JSON.parse(raw.replace(/```json|```/g,'').trim());
     result._title=title;result._org=org;result._url=url;result._jd=jd;
