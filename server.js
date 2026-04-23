@@ -145,6 +145,9 @@ app.post('/api/analyze', async (req, res) => {
       }),
     });
     const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' });
+    }
     res.json(data);
   } catch (err) {
     console.error('Anthropic proxy error:', err);
